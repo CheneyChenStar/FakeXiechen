@@ -1,0 +1,1 @@
+﻿SELECT TOP 1000 [Id] ,[Title] ,[Description] ,[OrininalPrice] ,[DiscountPresent] ,[CreateTime] ,[UpdateTime] ,[DepartureTime] ,[Feature] ,[Fees] ,[Notes] FROM [dbo].[TouristRoutes]
