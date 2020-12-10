@@ -14,7 +14,6 @@ namespace FakeXiechen.API.Profiles
         {
             CreateMap<ShoppingCart, ShoppingCartDto>();
             CreateMap<LineItem, LineItemDto>();
-            
 
         }
     }

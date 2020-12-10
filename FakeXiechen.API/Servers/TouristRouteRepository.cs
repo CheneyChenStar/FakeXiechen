@@ -131,9 +131,31 @@ namespace FakeXiechen.API.Servers
             await _context.ShaoppingCarts.AddAsync(shoppingCart);
         }
 
-        public async Task AddShoppingCartItem(LineItem lineItem)
+        public async Task AddShoppingCartItemAsync(LineItem lineItem)
         {
             await _context.LineItems.AddAsync(lineItem);
+        }
+
+        public async Task<LineItem> GetLineItemByItemIdAsync(int id)
+        {
+            return await _context.LineItems
+                .Where(l => l.Id == id)
+                .FirstOrDefaultAsync();
+        }
+
+        public void DeleteLineItem(LineItem lineItem)
+        {
+             _context.Remove(lineItem);
+        }
+
+        public async Task<IEnumerable<LineItem>> GetLineItemsByItemIdsAsync(IEnumerable<int> itemIds)
+        {
+            return await _context.LineItems.Where(li => itemIds.Contains(li.Id)).ToListAsync();
+        }
+
+        public void DeleteLineItems(IEnumerable<LineItem> lineItems)
+        {
+            _context.LineItems.RemoveRange(lineItems);
         }
     }
 }

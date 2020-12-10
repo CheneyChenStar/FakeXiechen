@@ -36,7 +36,15 @@ namespace FakeXiechen.API.Servers
 
         Task CreateShoppingCartAsync(ShoppingCart shoppingCart);
 
-        Task AddShoppingCartItem(LineItem lineItem);
+        Task AddShoppingCartItemAsync(LineItem lineItem);
+
+        Task<LineItem> GetLineItemByItemIdAsync(int id);
+
+        void DeleteLineItem(LineItem lineItem);
+
+        Task<IEnumerable<LineItem>> GetLineItemsByItemIdsAsync(IEnumerable<int> itemIds);
+
+        void DeleteLineItems(IEnumerable<LineItem> lineItems);
 
     }
 }

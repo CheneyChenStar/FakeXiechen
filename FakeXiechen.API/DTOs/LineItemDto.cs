@@ -12,6 +12,6 @@ namespace FakeXiechen.API.DTOs
         public double? DiscountPresent { get; set; }
         public Guid TouristRouteId { get; set; }    
         public Guid? ShoppingCartId { get; set; }  
-        public TouristRouteDto TouristRouteDto { get; set; }
+        public TouristRouteDto TouristRoute { get; set; }
     }
 }

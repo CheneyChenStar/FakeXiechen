@@ -9,7 +9,7 @@ namespace FakeXiechen.API.DTOs
     {
         public Guid Id { get; set; }
         public string UserId { get; set; }  //外键
-        public ICollection<LineItemDto> ShoppingCartItem { get; set; } //商品  
+        public ICollection<LineItemDto> ShoppingCartItems { get; set; } //商品  
             = new List<LineItemDto>();
     }
 }
