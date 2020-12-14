@@ -46,5 +46,10 @@ namespace FakeXiechen.API.Servers
 
         void DeleteLineItems(IEnumerable<LineItem> lineItems);
 
+        Task AddOrderAsync(Order order);
+
+        Task<IEnumerable<Order>> GetOrdersByUserIdAsync(string userId);
+
+        Task<Order> GetOrderByUserIdAndOrderIdAsync(string userId, Guid orderId);
     }
 }

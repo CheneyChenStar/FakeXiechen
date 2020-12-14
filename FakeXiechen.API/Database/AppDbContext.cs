@@ -21,6 +21,7 @@ namespace FakeXiechen.API.Database
 
         public DbSet<ShoppingCart> ShaoppingCarts { get; set; }
 
+        public DbSet<Order> Orders { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options)

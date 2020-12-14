@@ -50,7 +50,7 @@ namespace FakeXiechen.API.Controllers
  
         [HttpPost("items")]
         [Authorize(AuthenticationSchemes = "Bearer")]
-        public async Task<IActionResult> AddShoppingCartItem(
+        public async Task<IActionResult> AddShoppingCartItemAsync(
             [FromBody] AddShoppingCarItemDto  itemDto
             )
         {
@@ -88,7 +88,7 @@ namespace FakeXiechen.API.Controllers
 
         [HttpDelete("items/{itemsId}")]
         [Authorize(AuthenticationSchemes = "Bearer")]
-        public async Task<IActionResult> DeleteLineItemFromShoppingCart(
+        public async Task<IActionResult> DeleteLineItemFromShoppingCartAsync(
             [FromRoute] int itemsId
             )
         {
@@ -108,7 +108,7 @@ namespace FakeXiechen.API.Controllers
 
         [HttpDelete("items/({itemIds})")]
         [Authorize(AuthenticationSchemes = "Bearer")]
-        public async Task<IActionResult> DeleteLineItemsByIds(
+        public async Task<IActionResult> DeleteLineItemsByIdsAsync(
             [ModelBinder(BinderType = typeof(ArrayModelBinder))]
             [FromRoute] IEnumerable<int> itemIds
             )
@@ -125,5 +125,31 @@ namespace FakeXiechen.API.Controllers
             // 3.返回
             return NoContent();
         }
+        
+        [HttpPost("checkout")]
+        public async Task<IActionResult> CheckoutAsync()
+        {
+            //1.获取当前用户id
+            var userId = _httpContextAccessor.HttpContext.User
+                .FindFirst(ClaimTypes.NameIdentifier).Value;
+            //2.获取购物车
+            var shoppingCart = await _touristRouteRepository.GetShoppingCartByUserIdAsync(userId);
+            //3.创建订单
+            var order = new Order()
+            {
+                Id = Guid.NewGuid(),
+                CreateDateUTC = DateTime.UtcNow,
+                ShoppingCartItems = shoppingCart.ShoppingCartItems,
+                State = OrderStateEnum.Pending,
+                UserId = userId,
+            };
+            shoppingCart.ShoppingCartItems = null;
+            //4.保存订单
+            await _touristRouteRepository.AddOrderAsync(order);
+            await _touristRouteRepository.SaveAsync();
+            //5.返回dto对象
+            return Ok(_mapper.Map<OrderDto>(order));
+        }
+
     }
 }

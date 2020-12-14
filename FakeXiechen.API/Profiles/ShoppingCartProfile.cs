@@ -8,9 +8,9 @@ using FakeXiechen.API.Models;
 
 namespace FakeXiechen.API.Profiles
 {
-    public class ShoppingCartPorfile : Profile
+    public class ShoppingCartProfile : Profile
     {
-        public ShoppingCartPorfile()
+        public ShoppingCartProfile()
         {
             CreateMap<ShoppingCart, ShoppingCartDto>();
             CreateMap<LineItem, LineItemDto>();
