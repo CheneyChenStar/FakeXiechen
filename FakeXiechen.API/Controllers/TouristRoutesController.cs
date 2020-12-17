@@ -13,6 +13,9 @@ using FakeXiechen.API.ResourceParameters;
 using Microsoft.AspNetCore.JsonPatch;
 using FakeXiecheng.API.Helper;
 using Microsoft.AspNetCore.Authorization;
+using FakeXiechen.API.Helper;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Routing;
 
 
 namespace FakeXiechen.API.Controllers
@@ -21,33 +24,113 @@ namespace FakeXiechen.API.Controllers
     [ApiController]
     public class TouristRoutesController : ControllerBase
     {
+        private readonly IPropertyMappingService _propertyMapping;
         private readonly ITouristRouteRepository _touristRoutesRepository;
         private readonly IMapper _mapper;
+        private readonly IUrlHelper _urlHelper;
 
-        public TouristRoutesController(ITouristRouteRepository touristRoutesRepository, IMapper mapper)
-        {
-            _touristRoutesRepository = touristRoutesRepository;
-            _mapper = mapper;
-        }
-
-        //[Authorize(Roles = "Admin", AuthenticationSchemes = "Bearer")]
-        [HttpGet]
-        [HttpHead] //http://localhost:5000/api/TouristRoutes?keyword=埃及&rating=largerThan2
-        public async Task<IActionResult> GetTouristRoutesAsync(
-            [FromQuery] TouristRouteResourceParameters parameters   //  会将url参数自动映射至parameters对象中相同的字段，例如keyword=>parameters.Keyword，不区分大小写
-                                                                    //  [FromQuery] string keyword,
-                                                                    //  [FromQuery] string rating // [largerThan/lessThan/equalTo][0-5] 正则会分别匹配2部分
+        public TouristRoutesController(
+            ITouristRouteRepository touristRoutesRepository,
+            IMapper mapper,
+            IActionContextAccessor actionContextAccessor,
+            IUrlHelperFactory urlHelperFactory,
+            IPropertyMappingService propertyMapping
             )
         {
-                                        // await表示此处会等待，并且CPU会挂起此处状态转为执行其他操作
-                                        // 待等待的资源请求完成后转为继续回到此处继续往下执行。 
-            var touristRoutesFromRepo =  await _touristRoutesRepository.GetTouristRoutesAsync(parameters.Keyword, parameters.OperatorType, parameters.RatingValue);
+            _propertyMapping = propertyMapping;
+            _touristRoutesRepository = touristRoutesRepository;
+            _mapper = mapper;
+            _urlHelper = urlHelperFactory.GetUrlHelper(actionContextAccessor.ActionContext);
+
+
+        }
+
+        private string GenerateTouristRouteResourceURL(
+            TouristRouteResourceParameters touristRouteResource,
+            PaginationResourceParameters paginationResource,
+            ResourceUrlType type
+            )
+        {
+            return type switch
+            {
+                ResourceUrlType.PreviousPage => _urlHelper.Link("GetTouristRoutes",
+                new
+                {
+                    OrderBy =  touristRouteResource.OrderBy,
+                    keyword = touristRouteResource.Keyword,
+                    rating = touristRouteResource.Ratingg,
+                    pageNumber = paginationResource.PageNumber - 1,
+                    pageSize = paginationResource.PageSize
+                }),
+                ResourceUrlType.NextPage => _urlHelper.Link("GetTouristRoutes",
+                new
+                {
+                    OrderBy = touristRouteResource.OrderBy,
+                    keyword = touristRouteResource.Keyword,
+                    rating = touristRouteResource.Ratingg,
+                    pageNumber = paginationResource.PageNumber + 1,
+                    pageSize = paginationResource.PageSize
+                }),
+                _ => _urlHelper.Link("GetTouristRoutes",
+                new
+                {
+                    OrderBy = touristRouteResource.OrderBy,
+                    keyword = touristRouteResource.Keyword,
+                    rating = touristRouteResource.Ratingg,
+                    pageNumber = paginationResource.PageNumber,
+                    pageSize = paginationResource.PageSize
+                }
+                )
+            };
+        }
+
+        [HttpGet(Name = "GetTouristRoutes")]
+        [HttpHead] //http://localhost:5000/api/TouristRoutes?keyword=埃及&rating=largerThan2
+        public async Task<IActionResult> GetTouristRoutesAsync(
+            [FromQuery] TouristRouteResourceParameters touristRouteResource,   //  会将url参数自动映射至parameters对象中相同的字段，例如keyword=>parameters.Keyword，不区分大小写
+            [FromQuery] PaginationResourceParameters paginationResource
+            )
+        {
+            if (!_propertyMapping.IsMappingExits<TouristRouteDto,TouristRoute>(touristRouteResource.OrderBy))
+            {
+                return BadRequest("排序参数错误");
+            }
+
+            var touristRoutesFromRepo =  await _touristRoutesRepository.GetTouristRoutesAsync(
+                touristRouteResource.Keyword,
+                touristRouteResource.OperatorType,
+                touristRouteResource.RatingValue,
+                paginationResource.PageSize,
+                paginationResource.PageNumber,
+                touristRouteResource.OrderBy
+                );
+
             if (touristRoutesFromRepo == null || touristRoutesFromRepo.Count() <= 0)
             {
                 return NotFound("没有旅游路线");
             }
             var touristRouteDtos = _mapper.Map<IEnumerable<TouristRouteDto>>(touristRoutesFromRepo);
-            
+
+            var nextPageLink = touristRoutesFromRepo.HasNext
+                ? GenerateTouristRouteResourceURL(touristRouteResource, paginationResource, ResourceUrlType.NextPage)
+                : null;
+            var privousPageLink = touristRoutesFromRepo.HasPrevious
+                ? GenerateTouristRouteResourceURL(touristRouteResource, paginationResource, ResourceUrlType.PreviousPage)
+                : null;
+
+            // x-pagination
+            var paginationMetadata = new
+            {
+                privousPageLink,
+                nextPageLink,
+                totalCount = touristRoutesFromRepo.TotalCount,
+                pageSize = touristRoutesFromRepo.PageSize,
+                currentPage = touristRoutesFromRepo.CurrentPage,
+                totalPages = touristRoutesFromRepo.TotalPages
+            };
+
+            Response.Headers.Add("x-pagination", Newtonsoft.Json.JsonConvert.SerializeObject(paginationMetadata));
+
             return Ok(touristRouteDtos); 
         }
 
@@ -60,24 +143,6 @@ namespace FakeXiechen.API.Controllers
             {
                 return NotFound($"Id为[{touristRouteId}]的旅游路线未找到!");
             }
-
-            //TouristRouteDto touristRouteDto = new TouristRouteDto()
-            //{
-            //    Id = touristRouteFromRepo.Id,
-            //    CreateTime = touristRouteFromRepo.CreateTime,
-            //    DepartureCity = touristRouteFromRepo.DepartureCity.ToString(),
-            //    DepartureTime = touristRouteFromRepo.DepartureTime,
-            //    Description = touristRouteFromRepo.Description,
-            //    Feature = touristRouteFromRepo.Features,
-            //    Fees = touristRouteFromRepo.Fees,
-            //    Notes = touristRouteFromRepo.Notes,
-            //    Price = touristRouteFromRepo.OriginalPrice * (decimal)(touristRouteFromRepo.DiscountPresent ?? 1),
-            //    Rating = touristRouteFromRepo.Rating,
-            //    Title = touristRouteFromRepo.Title,
-            //    TravelDays = touristRouteFromRepo.TravelDays.ToString(),
-            //    TripType = touristRouteFromRepo.TripType.ToString(),
-            //    UpdateTime = touristRouteFromRepo.UpdateTime
-            //};
 
             var touristRouteDto = _mapper.Map<TouristRouteDto>(touristRouteFromRepo);//将实体映射至TouristRouteDto类型的实体并返回
 

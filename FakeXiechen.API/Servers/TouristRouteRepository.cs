@@ -1,4 +1,6 @@
 ﻿using FakeXiechen.API.Database;
+using FakeXiechen.API.DTOs;
+using FakeXiechen.API.Helper;
 using FakeXiechen.API.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -10,10 +12,15 @@ namespace FakeXiechen.API.Servers
 {
     public class TouristRouteRepository : ITouristRouteRepository
     {
+        private readonly IPropertyMappingService _propertyMappingService;
         private readonly AppDbContext _context;
 
-        public TouristRouteRepository(AppDbContext context)
+        public TouristRouteRepository(
+            AppDbContext context,
+            IPropertyMappingService propertyMappingService
+            )
         {
+            _propertyMappingService = propertyMappingService;
             _context = context;
         }
 
@@ -67,10 +74,20 @@ namespace FakeXiechen.API.Servers
             return await _context.TouristRoutePictures.Where(obj => obj.TouristRouteId == touristRouteId).ToListAsync();
         }
 
-        public async Task<IEnumerable<TouristRoute>> GetTouristRoutesAsync(string keyword, string ratingOperator, int? ratingValue)
+        public async Task<PaginationList<TouristRoute>> GetTouristRoutesAsync(
+            string keyword, 
+            string ratingOperator, 
+            int? ratingValue,
+            int pageSize,
+            int pageNumber,
+            string orderBy
+            )
         {
             // Linq to sql 关键词查循
-            IQueryable<TouristRoute> result = _context.TouristRoutes.Include(t => t.TouristRoutePictures);
+            IQueryable<TouristRoute> result = _context
+                .TouristRoutes
+                .Include(t => t.TouristRoutePictures);
+
             if (!string.IsNullOrEmpty(keyword))
             {
                 keyword = keyword.Trim();
@@ -79,22 +96,27 @@ namespace FakeXiechen.API.Servers
             //  评分查循
             if (ratingValue >= 0)
             {
-                switch (ratingOperator)
+                result = ratingOperator switch
                 {
-                    case "largerThan":
-                        result = result.Where(t => t.Rating >= ratingValue);
-                        break;
-                    case "lessThan":
-                        result = result.Where(t => t.Rating <= ratingValue);
-                        break;
-                    case "equalTo":
-                    default:
-                        result = result.Where(t => t.Rating == ratingValue);
-                        break;
+                    "largerThan" => result.Where(t => t.Rating >= ratingValue),
+                    "lessThan" => result.Where(t => t.Rating <= ratingValue),
+                    _ => result.Where(t => t.Rating == ratingValue),
+                };
+            }
+            
+            if (!string.IsNullOrWhiteSpace(orderBy))
+            {
+                if (orderBy.ToLowerInvariant() == "originalprice")
+                {
+                    result = result.OrderBy(t => t.OriginalPrice);
                 }
+                var touristRouteMappingDictionary = _propertyMappingService
+                    .GetPropertyMapping<TouristRouteDto, TouristRoute>();
+
+                result = result.ApplySort(orderBy, touristRouteMappingDictionary);
             }
 
-            return await result.ToListAsync();  //此处才是真正执行数据库查询操作，前面操作都是Linq to sql操作，也就是准备查询SQL
+            return await PaginationList<TouristRoute>.CreateAsync(pageNumber, pageSize, result);  //此处才是真正执行数据库查询操作，前面操作都是Linq to sql操作，也就是准备查询SQL
         }
 
         public async Task<bool> IsExitsForTouristRouteAsync(Guid touristRouteId)
@@ -163,9 +185,11 @@ namespace FakeXiechen.API.Servers
             await _context.Orders.AddAsync(order);
         }
 
-        public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(string userId)
+        public async Task<PaginationList<Order>> GetOrdersByUserIdAsync(string userId, int pageNumber, int pageSize)
         {
-            return await _context.Orders.Where(o => o.UserId == userId).ToListAsync();
+            //return await _context.Orders.Where(o => o.UserId == userId).ToListAsync();
+            IQueryable<Order> result = _context.Orders.Where(o => o.UserId == userId);
+            return await PaginationList<Order>.CreateAsync(pageNumber, pageSize, result);
         }
 
         public async Task<Order> GetOrderByUserIdAndOrderIdAsync(string userId, Guid orderId)

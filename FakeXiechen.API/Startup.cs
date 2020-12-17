@@ -21,6 +21,7 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Identity;
 using FakeXiechen.API.Models;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace FakeXiechen.API
 {
@@ -106,6 +107,10 @@ namespace FakeXiechen.API
                 //option.UseSqlServer("server=localhost; Database=FakeXiechengDb; User Id=sa; Password=Cxing1234567890");
                 option.UseSqlServer(_configuration["DbContext:ConnectionString"]);
             });
+
+            services.AddSingleton<IActionContextAccessor, ActionContextAccessor>();
+
+            services.AddTransient<IPropertyMappingService, PropertyMappingService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

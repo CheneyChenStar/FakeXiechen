@@ -13,12 +13,10 @@ namespace FakeXiechen.API.DTOs
 
         public string Title { get; set; }
 
-        public string Description { get; set; }
         // Price = OrininalPrice * DiscountPresent
         public decimal Price { get; set; }
-        //public decimal OrininalPrice { get; set; }
-
-        //public double? DiscountPresent { get; set; }
+        public decimal OriginalPrice { get; set; } //originalPrice
+        public double? DiscountPresent { get; set; }
         public DateTime CreateTime { get; set; }
         public DateTime? UpdateTime { get; set; }
         public DateTime? DepartureTime { get; set; }
@@ -32,6 +30,7 @@ namespace FakeXiechen.API.DTOs
         public string TripType { get; set; }
         public string DepartureCity { get; set; }
 
+        public string Description { get; set; }
         public ICollection<TouristRoutePictureDto> TouristRoutePictures { get; set; }
             = new List<TouristRoutePictureDto>();
 

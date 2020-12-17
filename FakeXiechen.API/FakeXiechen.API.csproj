@@ -31,6 +31,7 @@
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="Stateless" Version="5.1.1" />
+    <PackageReference Include="System.Linq.Dynamic.Core" Version="1.1.7" />
   </ItemGroup>
 
 </Project>

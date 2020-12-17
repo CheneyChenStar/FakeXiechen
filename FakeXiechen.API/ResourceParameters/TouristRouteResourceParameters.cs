@@ -8,6 +8,7 @@ namespace FakeXiechen.API.ResourceParameters
 {
     public class TouristRouteResourceParameters
     {
+        public string OrderBy { get; set; }
         public string Keyword { get; set; }
         public string OperatorType { get; set; }
         public int? RatingValue { get; set; }

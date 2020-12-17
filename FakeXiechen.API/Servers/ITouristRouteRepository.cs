@@ -1,4 +1,5 @@
-﻿using FakeXiechen.API.Models;
+﻿using FakeXiechen.API.Helper;
+using FakeXiechen.API.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,8 @@ namespace FakeXiechen.API.Servers
     public interface ITouristRouteRepository
     {
 
-        Task<IEnumerable<TouristRoute>> GetTouristRoutesAsync( string keyword, string ratingOperator, int? ratingValue);
+        Task<PaginationList<TouristRoute>> GetTouristRoutesAsync( string keyword, string ratingOperator, int? ratingValue,
+                                                                int pageSize, int pageNumber, string orderBy);
         Task<TouristRoute> GetTouristRouteAsync(Guid touristRouteId);
 
         Task<IEnumerable<TouristRoute>> GetTouristRoutesByIdsAsync(IEnumerable<Guid> Ids);
@@ -48,7 +50,7 @@ namespace FakeXiechen.API.Servers
 
         Task AddOrderAsync(Order order);
 
-        Task<IEnumerable<Order>> GetOrdersByUserIdAsync(string userId);
+        Task<PaginationList<Order>> GetOrdersByUserIdAsync(string userId, int pageNumber, int pageSize);
 
         Task<Order> GetOrderByUserIdAndOrderIdAsync(string userId, Guid orderId);
     }

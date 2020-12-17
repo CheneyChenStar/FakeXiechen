@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using FakeXiechen.API.DTOs;
 using Microsoft.AspNetCore.Authorization;
+using FakeXiechen.API.ResourceParameters;
 
 namespace FakeXiechen.API.Controllers
 {
@@ -33,13 +34,14 @@ namespace FakeXiechen.API.Controllers
         }
 
         [HttpGet]
-        [Authorize(AuthenticationSchemes = "Bearer")]        
-        public async Task<IActionResult> GetOrdersAsync()
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task<IActionResult> GetOrdersAsync([FromQuery] PaginationResourceParameters paginationResource)
         {
             // 1.获取当前用户
             var userId = _httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value;
             // 2.通过userId获取该用户的所有订单
-            IEnumerable<Order> orders = await _touristRouteRepository.GetOrdersByUserIdAsync(userId);
+            var orders = await _touristRouteRepository.GetOrdersByUserIdAsync(
+                            userId,paginationResource.PageNumber, paginationResource.PageSize);
             // 3.返回所有订单的dto
             return Ok(_mapper.Map<IEnumerable<OrderDto>>(orders));
         }
