@@ -56,6 +56,7 @@ namespace FakeXiechen.API.Controllers
                 ResourceUrlType.PreviousPage => _urlHelper.Link("GetTouristRoutes",
                 new
                 {
+                    fields = touristRouteResource.Fields,
                     OrderBy =  touristRouteResource.OrderBy,
                     keyword = touristRouteResource.Keyword,
                     rating = touristRouteResource.Ratingg,
@@ -65,6 +66,7 @@ namespace FakeXiechen.API.Controllers
                 ResourceUrlType.NextPage => _urlHelper.Link("GetTouristRoutes",
                 new
                 {
+                    fields = touristRouteResource.Fields,
                     OrderBy = touristRouteResource.OrderBy,
                     keyword = touristRouteResource.Keyword,
                     rating = touristRouteResource.Ratingg,
@@ -74,6 +76,7 @@ namespace FakeXiechen.API.Controllers
                 _ => _urlHelper.Link("GetTouristRoutes",
                 new
                 {
+                    fields = touristRouteResource.Fields,
                     OrderBy = touristRouteResource.OrderBy,
                     keyword = touristRouteResource.Keyword,
                     rating = touristRouteResource.Ratingg,
@@ -96,6 +99,11 @@ namespace FakeXiechen.API.Controllers
                 return BadRequest("排序参数错误");
             }
 
+            if (!_propertyMapping.IsPropertiesExists<TouristRouteDto>(touristRouteResource.Fields))
+            {
+                return BadRequest("非法的塑形参数");
+            }
+
             var touristRoutesFromRepo =  await _touristRoutesRepository.GetTouristRoutesAsync(
                 touristRouteResource.Keyword,
                 touristRouteResource.OperatorType,
@@ -116,7 +124,7 @@ namespace FakeXiechen.API.Controllers
                 : null;
             var privousPageLink = touristRoutesFromRepo.HasPrevious
                 ? GenerateTouristRouteResourceURL(touristRouteResource, paginationResource, ResourceUrlType.PreviousPage)
-                : null;
+                : null; 
 
             // x-pagination
             var paginationMetadata = new
@@ -131,13 +139,17 @@ namespace FakeXiechen.API.Controllers
 
             Response.Headers.Add("x-pagination", Newtonsoft.Json.JsonConvert.SerializeObject(paginationMetadata));
 
-            return Ok(touristRouteDtos); 
+            return Ok(touristRouteDtos.ShapeData(touristRouteResource.Fields)); 
         }
 
         [HttpGet("{touristRouteId}", Name = "GetTouristRouteById")]
         [HttpHead("{touristRouteId}")]
-        public async Task<IActionResult> GetTouristRouteByIdAsync(Guid touristRouteId)
+        public async Task<IActionResult> GetTouristRouteByIdAsync(Guid touristRouteId, string fields)
         {
+            if (!_propertyMapping.IsPropertiesExists<TouristRouteDto>(fields))
+            {
+                return BadRequest("非法的塑形参数");
+            }
             var touristRouteFromRepo = await _touristRoutesRepository.GetTouristRouteAsync(touristRouteId);
             if (touristRouteFromRepo == null)
             {
@@ -146,7 +158,7 @@ namespace FakeXiechen.API.Controllers
 
             var touristRouteDto = _mapper.Map<TouristRouteDto>(touristRouteFromRepo);//将实体映射至TouristRouteDto类型的实体并返回
 
-            return  Ok(touristRouteDto);
+            return  Ok(touristRouteDto.ShapeData(fields));
         }
 
         [HttpPost]

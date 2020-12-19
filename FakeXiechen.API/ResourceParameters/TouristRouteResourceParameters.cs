@@ -31,5 +31,7 @@ namespace FakeXiechen.API.ResourceParameters
             }
         }
 
+        public string Fields { get; set; }
+
     }
 }

@@ -3,6 +3,7 @@ using FakeXiechen.API.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace FakeXiechen.API.Servers
@@ -57,6 +58,30 @@ namespace FakeXiechen.API.Servers
                     : trimmedField.Remove(indexOfFirstSpace);
                 if (!propertyMapping.ContainsKey(propertyName))
                 {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public bool IsPropertiesExists<T>(string fields)
+        {
+            if (string.IsNullOrWhiteSpace(fields))
+            {
+                return true;
+            }
+
+            var fieldsAfterSplit = fields.Split(",");
+
+            foreach (var field in fieldsAfterSplit)
+            {
+                var propertyName = field.Trim();
+
+                var propertyInfo = typeof(T).GetProperty(propertyName, BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
+
+                if (propertyInfo == null)
+                {
+                    //没有对应属性名
                     return false;
                 }
             }

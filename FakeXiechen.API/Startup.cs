@@ -59,7 +59,7 @@ namespace FakeXiechen.API
                     {
                         var problemDetails = new ValidationProblemDetails(context.ModelState)
                         {
-                            Type = "无所谓",
+                            Type = "无效",
                             Title = "数据验证失败",
                             Status = StatusCodes.Status422UnprocessableEntity,
                             Detail = "请看详细的说明",

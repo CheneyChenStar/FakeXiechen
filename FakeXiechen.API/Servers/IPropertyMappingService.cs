@@ -6,5 +6,7 @@ namespace FakeXiechen.API.Servers
     {
         Dictionary<string, PropertyMappingValue> GetPropertyMapping<TSource, TDestination>();
         bool IsMappingExits<TSource, TDestination>(string fields);
+
+        bool IsPropertiesExists<T>(string fields);
     }
 }
