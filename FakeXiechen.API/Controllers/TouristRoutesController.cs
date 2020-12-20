@@ -16,11 +16,11 @@ using Microsoft.AspNetCore.Authorization;
 using FakeXiechen.API.Helper;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
-
+using Microsoft.Net.Http.Headers;
 
 namespace FakeXiechen.API.Controllers
 {
-    [Route("api/{controller}")]
+    [Route("api/[controller]")]
     [ApiController]
     public class TouristRoutesController : ControllerBase
     {
@@ -87,13 +87,104 @@ namespace FakeXiechen.API.Controllers
             };
         }
 
-        [HttpGet(Name = "GetTouristRoutes")]
-        [HttpHead] //http://localhost:5000/api/TouristRoutes?keyword=埃及&rating=largerThan2
-        public async Task<IActionResult> GetTouristRoutesAsync(
-            [FromQuery] TouristRouteResourceParameters touristRouteResource,   //  会将url参数自动映射至parameters对象中相同的字段，例如keyword=>parameters.Keyword，不区分大小写
-            [FromQuery] PaginationResourceParameters paginationResource
+        private IEnumerable<LinkDto> CreateLinkForSingleTouristRoute(Guid touristRouteId, string fields)
+        {
+            var links = new List<LinkDto>();
+
+            links.Add(
+                new LinkDto(
+                        Url.Link("GetTouristRouteById", new { touristRouteId, fields }),
+                        "self",
+                        "GET" 
+                    )
+                );
+            //全局更新
+            links.Add(
+                new LinkDto(
+                    Url.Link("UpdateTouristRoute", new {touristRouteId}),
+                    "update",
+                    "PUT"
+                    )
+                );
+            //局部更新
+            links.Add(
+                new LinkDto(
+                    Url.Link("LocallyUpdateTouristRoute", new { touristRouteId }),
+                    "Locally update",
+                    "PATCH"
+                    )
+                );
+            //删除
+            links.Add(
+                new LinkDto(
+                    
+                    Url.Link("DeleteTouritstRoute", new { touristRouteId }),
+                    "delete",
+                    "DELETE"
+                    )
+                );
+            //获取路线图片
+            links.Add(
+                new LinkDto(
+                    Url.Link("GetTouristRoutePicturesByRouteId", new {touristRouteId}),
+                    "get pictures",
+                    "GET"
+                    )
+                );
+
+            // 添加新图片
+            links.Add(
+                new LinkDto(
+                    Url.Link("CreateTouristRoutePicture", new {touristRouteId}),
+                    "create picture",
+                    "POST"
+                    )
+                );
+
+            return links;
+        }
+
+        private IEnumerable<LinkDto> CreateLinksForTouristRouteList(
+            TouristRouteResourceParameters routeResourceParameters,
+            PaginationResourceParameters paginationResourceParameters
             )
         {
+            var links = new List<LinkDto>();
+
+            //添加self，自我链接
+            links.Add(new LinkDto(
+                    GenerateTouristRouteResourceURL(
+                      routeResourceParameters, paginationResourceParameters, ResourceUrlType.CurrentPage),
+                    "self",
+                    "GET"
+                ));
+
+            // "api/touristRoutes
+            // POST
+            links.Add(new LinkDto(
+                    Url.Link("CreateTouristRoute", null),
+                    "create_tourist_route",
+                    "POST"
+                ));
+
+            return links;
+
+        }
+
+        //1.application/json
+        //2.application/vnd.cxing.hateoas+json  改自定义媒体类型需要在在Sartup类中的ConfigureServices中注册
+        [HttpGet(Name = "GetTouristRoutes")]
+        [HttpHead]
+        public async Task<IActionResult> GetTouristRoutes(
+            [FromQuery] TouristRouteResourceParameters touristRouteResource,   //  会将url参数自动映射至parameters对象中相同的字段，例如keyword=>parameters.Keyword，不区分大小写
+            [FromQuery] PaginationResourceParameters paginationResource,
+            [FromHeader(Name = "Accept")] string mediaType  //请求的媒体头中可能不止一个Accept，是个坑
+            )
+        {
+            if (!MediaTypeHeaderValue.TryParse(mediaType, out MediaTypeHeaderValue parseMediaType))
+            {
+                return BadRequest();
+            }
             if (!_propertyMapping.IsMappingExits<TouristRouteDto,TouristRoute>(touristRouteResource.OrderBy))
             {
                 return BadRequest("排序参数错误");
@@ -139,7 +230,31 @@ namespace FakeXiechen.API.Controllers
 
             Response.Headers.Add("x-pagination", Newtonsoft.Json.JsonConvert.SerializeObject(paginationMetadata));
 
-            return Ok(touristRouteDtos.ShapeData(touristRouteResource.Fields)); 
+
+            var shapedDtoList = touristRouteDtos.ShapeData(touristRouteResource.Fields);
+            
+            if (parseMediaType.MediaType == "application/vnd.cxing.hateoas+json")
+            {
+                var linkDto = CreateLinksForTouristRouteList(touristRouteResource, paginationResource);
+
+                var shapedDtoWithLinkList = shapedDtoList.Select(t =>
+                {
+                    var touristRouteDictionary = t as IDictionary<string, object>;
+                    var links = CreateLinkForSingleTouristRoute((Guid)touristRouteDictionary["Id"], null);
+                    touristRouteDictionary.Add("links", links);
+                    return touristRouteDictionary;
+                });
+
+                var result = new
+                {
+                    value = shapedDtoWithLinkList,
+                    links = linkDto
+                };
+
+                return Ok(result);
+            }
+
+            return Ok(shapedDtoList);
         }
 
         [HttpGet("{touristRouteId}", Name = "GetTouristRouteById")]
@@ -158,11 +273,18 @@ namespace FakeXiechen.API.Controllers
 
             var touristRouteDto = _mapper.Map<TouristRouteDto>(touristRouteFromRepo);//将实体映射至TouristRouteDto类型的实体并返回
 
-            return  Ok(touristRouteDto.ShapeData(fields));
+            //return  Ok(touristRouteDto.ShapeData(fields));
+
+            var linksDto = CreateLinkForSingleTouristRoute(touristRouteId, fields);
+
+            var result = touristRouteDto.ShapeData(fields) as IDictionary<string, object>;
+            result.Add("links", linksDto);
+
+            return Ok(result);
         }
 
-        [HttpPost]
-        [Authorize(Roles = "Admin", AuthenticationSchemes = "Bearer")]
+        [HttpPost(Name = "CreateTouristRoute")]
+        [Authorize( AuthenticationSchemes = "Bearer")]
         public async Task<IActionResult> CreateTouristRouteAsync(
             [FromBody] TouristRouteForCreationDto creationDto
         )
@@ -172,14 +294,19 @@ namespace FakeXiechen.API.Controllers
             await _touristRoutesRepository.SaveAsync();
             var touristRouteDtoToReturn = _mapper.Map<TouristRouteDto>(touristRouteModel);
 
+            var links = CreateLinkForSingleTouristRoute(touristRouteModel.Id, null);
+
+            var result = touristRouteDtoToReturn.ShapeData(null) as IDictionary<string, object>;
+            result.Add("links", links);
+
             return CreatedAtRoute(
                 "GetTouristRouteById",
-                new { touristRouteId = touristRouteDtoToReturn.Id },
-                touristRouteDtoToReturn //post请求成功后输出的数据
+                new { touristRouteId = result["Id"] },
+                result //post请求成功后输出的数据
                 );
         }
 
-        [HttpPut("{touristRouteId}")]
+        [HttpPut("{touristRouteId}", Name = "UpdateTouristRoute")]
         [Authorize(Roles = "Admin", AuthenticationSchemes = "Bearer")]
         public async Task<IActionResult> UpdateTouristRouteAsync(
             [FromRoute] Guid touristRouteId,
@@ -198,7 +325,7 @@ namespace FakeXiechen.API.Controllers
             return NoContent();
         }
 
-        [HttpPatch("{touristRouteId}")]
+        [HttpPatch("{touristRouteId}", Name = "LocallyUpdateTouristRoute")]
         [Authorize(Roles = "Admin", AuthenticationSchemes = "Bearer")]
         public async Task<IActionResult> LocallyUpdateTouristRouteAsync(
             [FromRoute] Guid touristRouteId,
@@ -225,7 +352,7 @@ namespace FakeXiechen.API.Controllers
             return NoContent();
         }
 
-        [HttpDelete("{touristRouteId}")]
+        [HttpDelete("{touristRouteId}", Name = "DeleteTouritstRoute")]
         [Authorize(Roles = "Admin", AuthenticationSchemes = "Bearer")]
         public async Task<IActionResult> DeleteTouritstRouteAsync([FromRoute] Guid touristRouteId)
         {

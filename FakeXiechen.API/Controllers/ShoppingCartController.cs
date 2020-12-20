@@ -15,7 +15,7 @@ using FakeXiecheng.API.Helper;
 namespace FakeXiechen.API.Controllers
 {
     [ApiController]
-    [Route("api/shoppingCart")]
+    [Route("api/[controller]")]
     public class ShoppingCartController : ControllerBase
     {
         private readonly IMapper _mapper;
@@ -34,7 +34,7 @@ namespace FakeXiechen.API.Controllers
         }
 
         // 获取购物车
-        [HttpGet]
+        [HttpGet(Name = "GetShoppingCart")]
         [Authorize(AuthenticationSchemes = "Bearer")]
         public async Task<IActionResult> GetShoppingCartAsync()
         {

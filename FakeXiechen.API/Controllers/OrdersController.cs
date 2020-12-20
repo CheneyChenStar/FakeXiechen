@@ -14,7 +14,7 @@ using FakeXiechen.API.ResourceParameters;
 
 namespace FakeXiechen.API.Controllers
 {
-    [Route("api/orders")]
+    [Route("api/[controller]")]
     [ApiController]
     public class OrdersController : ControllerBase
     {
@@ -33,7 +33,7 @@ namespace FakeXiechen.API.Controllers
             _httpContextAccessor = httpContextAccessor;
         }
 
-        [HttpGet]
+        [HttpGet(Name = "GetOrders")]
         [Authorize(AuthenticationSchemes = "Bearer")]
         public async Task<IActionResult> GetOrdersAsync([FromQuery] PaginationResourceParameters paginationResource)
         {

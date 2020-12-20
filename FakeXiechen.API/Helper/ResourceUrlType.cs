@@ -8,6 +8,7 @@ namespace FakeXiechen.API.Helper
     public enum ResourceUrlType
     {
         NextPage,
-        PreviousPage
+        PreviousPage,
+        CurrentPage,
     }
 }

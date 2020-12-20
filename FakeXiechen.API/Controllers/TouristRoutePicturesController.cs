@@ -2,6 +2,7 @@
 using FakeXiechen.API.DTOs;
 using FakeXiechen.API.Models;
 using FakeXiechen.API.Servers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -29,7 +30,7 @@ namespace FakeXiechen.API.Controllers
                 throw new ArgumentNullException(nameof(mapper));
         }
 
-        [HttpGet]
+        [HttpGet(Name = "GetTouristRoutePicturesByRouteId")]
         public async Task<IActionResult> GetTouristRoutePicturesByRouteIdAsync(Guid touristRouteId)
         {
             if (! await _touristRouteRepository.IsExitsForTouristRouteAsync(touristRouteId))
@@ -61,7 +62,8 @@ namespace FakeXiechen.API.Controllers
             return Ok(_mapper.Map<TouristRoutePictureDto>(picture));
         }
 
-        [HttpPost]
+        [HttpPost(Name = "CreateTouristRoutePicture")]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         public async Task<IActionResult> CreateTouristRoutePictureAsync(
             [FromRoute] Guid touristRouteId,
             [FromBody] TouristRoutePictureForCreationDto pictureForCreationDto
@@ -89,6 +91,7 @@ namespace FakeXiechen.API.Controllers
         }
 
         [HttpDelete("{pictureId}")]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         public async Task<IActionResult> DeletePictureAsync(
             [FromRoute] Guid touristRouteId,
             [FromRoute] int pictureId
